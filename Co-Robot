@@ -1,0 +1,182 @@
+#!/usr/bin/env python
+import	sys
+from ImageProcess import *
+from robolink import * 
+from robodk import *
+from pygame import mixer
+import time
+RDK = Robolink()
+robot = RDK.Item('', ITEM_TYPE_ROBOT)
+PositionOfCamera1 = [300, 0, 650, -180, 0, -180]
+PositionOfCamera2 = [0, 450, 800, -180, 0, -180]
+PositionOfObject2 = [500, 0, 150, -180, 0, -180]
+PositionOfObject  = []
+DressSound = "/home/bitwanghaili/catkin_ws/src/kuka_controller/sound.mp3"
+mixer.init()
+def PlayMp3(Text):
+    mixer.music.load(Text)
+    mixer.music.play()
+    while mixer.music.get_busy():
+        time.sleep(0.1)
+def MoveXYZABCptp(my_client, position):
+	x=position[0]
+	y=position[1]
+	z=position[2]
+	a=position[3]
+	b=position[4]
+	c=position[5]
+	text = 'setPositionXYZABC' + ' ' + str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(a) + ' ' + str(b) + ' ' + str(c) + ' ptp'
+	my_client.send_command(text)
+	print('robot is working...')
+	while abs(my_client.ToolPosition[0][0] - x) > 0.1 or abs(my_client.ToolPosition[0][1] - y) > 0.1 or abs(my_client.ToolPosition[0][2] - z) > 0.1:
+                try:
+		   robot.MoveJ(KUKA_2_Pose(my_client.ToolPosition[0]))
+                except:
+                   print('error of RoboDk ...')
+                #my_client.send_command(text)
+		if my_client.isCollision[0]:
+			#PlayMp3(DressSound)
+			start=time.clock()
+			while (time.clock() - start) < 0.3:
+				robot.MoveJ(KUKA_2_Pose(my_client.ToolPosition[0]))
+			my_client.send_command('resetCollision')
+			my_client.send_command(text)
+def MoveXYZABClin(my_client, position):
+        x=position[0]
+        y=position[1]
+        z=position[2]
+        a=position[3]
+        b=position[4]
+        c=position[5]
+        text = 'setPositionXYZABC' + ' ' + str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(a) + ' ' + str(b) + ' ' + str(c) + ' lin'
+        my_client.send_command(text)
+	print('robot is working...')
+        while abs(my_client.ToolPosition[0][0] - x) > 0.1 or abs(my_client.ToolPosition[0][1] - y) > 0.1 or abs(my_client.ToolPosition[0][2] - z) > 0.1:
+		robot.MoveL(KUKA_2_Pose(my_client.ToolPosition[0]))
+		if my_client.isCollision[0]:
+			PlayMp3(DressSound)
+			start = time.clock()
+                        while (time.clock() - start) < 0.3:
+                                robot.MoveL(KUKA_2_Pose(my_client.ToolPosition[0]))
+			my_client.send_command('resetCollision')
+			my_client.send_command(text)
+def MovePosition(my_client, position):
+        position = [i for k in eval(str(position)) for i in k]
+	print(position) 
+        a1=position[0]
+        a2=position[1]
+        a3=position[2]
+        a4=position[3]
+        a5=position[4]
+        a6=position[5]
+	a7=position[6]
+        text = 'setPosition' + ' ' + str(a1) + ' ' + str(a2) + ' ' + str(a3) + ' ' + str(a4) + ' ' + str(a5) + ' ' + str(a6) + ' ' + str(a7)
+	print(text)
+        my_client.send_command(text)
+	print('robot is working...')
+        while abs(my_client.JointPosition[0][0] - a1) > 0.1 or abs(my_client.JointPosition[0][1] - a2) > 0.1 or abs(my_client.JointPosition[0][2] - a3) > 0.1:
+		robot.MoveL(KUKA_2_Pose(my_client.ToolPosition[0]))
+                if my_client.isCollision[0]:
+			PlayMp3(DressSound)
+			start = time.clock()
+                        while (time.clock() - start) < 0.3:
+                                robot.MoveL(KUKA_2_Pose(my_client.ToolPosition[0]))
+			my_client.send_command('resetCollision')
+			my_client.send_command(text)
+def ZhuaQuWuTi(my_client, n, Text):
+    time.sleep(0.5)
+    MoveXYZABCptp(my_client, PositionOfCamera1)
+    x,y,angle=ProcessingOfImage(n)
+    z=73
+    xyz_move = mult3([x-300,y-0,z-650], 1)
+    print(xyz_move)
+    while x==0 and y==0:
+        if x==0 and y==0:
+            x=350
+            y=0
+            z=650
+	    MoveXYZABCptp(my_client, [x, y, z, -180, 0, -180])
+            x,y,angle=ProcessingOfImage(n)
+            z=73
+            if x==0 and y==0:
+                x=325
+                y=50
+                z=650
+                MoveXYZABCptp(my_client, [x, y, z, -180, 0, -180])
+                x,y,angle=ProcessingOfImage(n)
+                z=73
+                if x==0 and y==0:
+                    x=325
+                    y=-50
+                    z=650
+                    MoveXYZABCptp(my_client, [x, y, z, -180, 0, -180])
+                    x,y,angle=ProcessingOfImage(n)
+                    z=73
+                    if x==0 and y==0:
+                        x=275
+                        y=0
+                        z=650
+                        MoveXYZABCptp(my_client, [x, y, z, -180, 0, -180])
+                        x,y,angle=ProcessingOfImage(n)
+                        z=73
+                        if x is not 0 and y is not 0:
+                            x=x-25
+                            xyz_move = mult3([x-275,y-0,z-650], 1)
+                        else:
+                            pass
+                    else:
+                        x=x+25
+                        y=y-50
+                        xyz_move = mult3([x-325,y+50,z-700], 1)
+                else:
+                    x=x+25
+                    y=y+50
+                    xyz_move = mult3([x-325,y-50,z-650], 1)
+            else:
+                x=x+50
+                xyz_move = mult3([x-350,y-0,z-650], 1) 
+    print('x',x,'y',y,'z',z)
+    if angle > 180:
+        angle=angle-360
+    #robot_joints[6]=angle
+    #print(robot_joints)
+    #MovePosition(my_client, robot_joints)
+    if x < 380:
+             x = 380
+             print('values of x is bigger 380')
+    PositionOfObject = [x, y, z, angle, 0, -180]
+    MoveXYZABCptp(my_client, PositionOfObject)
+    MoveXYZABCptp(my_client, PositionOfCamera1)
+    MoveXYZABCptp(my_client, PositionOfCamera2)
+    x, y, z= ImageOfHand()
+    print("x=",x," y=",y," z=",z)
+    while x is None or y is None or z is None:
+          PlayMp3(Text[39])
+          print('put your hand in area ....')
+          x, y, z = ImageOfHand()
+    while -850>x or y>700 or x>850 or -700>y or z<0:
+          PlayMp3(Text[39])
+          print('put your hand in area ....') 
+          x, y, z = ImageOfHand()
+    PositionOfHand = [x, y, z, -180, 0, -180]
+    MoveXYZABCptp(my_client, PositionOfHand)
+    MoveXYZABCptp(my_client, PositionOfCamera2)
+    
+def RemoveObject(my_client,Text):
+    MoveXYZABCptp(my_client, PositionOfCamera2)
+    x1=0
+    y1=550
+    z1=700
+    x, y, z = ImageOfHand()
+    print("x=",x," y=",y," z=",z)
+    while x is None or y is None or z is None:
+          PlayMp3(Text[39])
+          print('put your hand in area ....')
+          x, y, z= ImageOfHand()
+    while -1000>x or y>700:
+          PlayMp3(Text[39])
+          print('put your hand in area ....') 
+          x, y, z = ImageOfHand()
+    PositionOfHand = [x, y, z, -180, 0, -180]
+    MoveXYZABCptp(my_client, PositionOfHand)
+MoveXYZABCptp(my_client, PositionOfCamera2)
